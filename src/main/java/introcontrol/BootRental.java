@@ -45,7 +45,6 @@ public class BootRental {
             default:
                 System.out.println("You get all the boots, remaining people waiting for free seats: " + (participants - 10));
         }
-
     }
 
 }
