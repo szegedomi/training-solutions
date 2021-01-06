@@ -1,4 +1,5 @@
-package exam02;
+
+package exam02.arraySelector;
 
 import org.junit.jupiter.api.Test;
 
@@ -15,4 +16,6 @@ public class ArraySelectorTest {
         assertEquals("[1, 3]", new ArraySelector().selectEvens(new int[]{1, 2, 3, 4}));
         assertEquals("[1, 3, 5]", new ArraySelector().selectEvens(new int[]{1, 2, 3, 4, 5}));
     }
+
+
 }
