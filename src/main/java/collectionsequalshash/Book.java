@@ -13,6 +13,12 @@ public class Book {
         this.author = author;
     }
 
+    public Book(String regNumber, String title, String author) {
+        this.regNumber = regNumber;
+        this.title = title;
+        this.author = author;
+    }
+
     public String getRegNumber() {
         return regNumber;
     }
