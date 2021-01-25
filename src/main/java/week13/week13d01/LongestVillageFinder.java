@@ -12,7 +12,7 @@ public class LongestVillageFinder {
 
             String result = "";
             String line;
-            line = br.readLine(); //reading header
+            br.readLine(); //reading header
             String village;
             while((line = br.readLine()) != null){
                 village = line.split(";", 3)[1];
