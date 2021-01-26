@@ -1,4 +1,4 @@
-package week05.w05d05;
+package week05.week05d05;
 
 public class User {
 
