@@ -1,4 +1,4 @@
-package methodes;
+package methodstructure;
 
 public class BodyMass {
 
