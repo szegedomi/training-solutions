@@ -1,4 +1,4 @@
-package printf;
+package formatlocaleprint;
 
 import org.junit.jupiter.api.Test;
 

@@ -1,4 +1,4 @@
-package printf;
+package formatlocaleprint;
 
 
 import java.util.Locale;
