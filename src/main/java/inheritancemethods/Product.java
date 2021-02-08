@@ -1,4 +1,4 @@
-package inheritancemethod;
+package inheritancemethods;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
