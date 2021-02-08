@@ -1,4 +1,4 @@
-package methodepass;
+package methodpass;
 
 import java.util.ArrayList;
 import java.util.List;

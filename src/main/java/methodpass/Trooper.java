@@ -1,4 +1,4 @@
-package methodepass;
+package methodpass;
 
 public class Trooper {
 

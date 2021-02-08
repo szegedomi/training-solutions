@@ -1,4 +1,4 @@
-package methodepass;
+package methodpass;
 
 import java.lang.Math;
 
