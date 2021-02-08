@@ -1,4 +1,4 @@
-package intandfloat;
+package numbers;
 
 import java.util.Scanner;
 

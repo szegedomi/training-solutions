@@ -1,6 +1,5 @@
-package intandfloat;
+package numbers;
 
-import java.sql.SQLOutput;
 import java.util.Scanner;
 
 public class Circle {
