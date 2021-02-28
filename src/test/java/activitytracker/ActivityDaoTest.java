@@ -1,12 +1,14 @@
 package activitytracker;
 
 
+import abstractclass.gamecharacter.AxeWarrior;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mariadb.jdbc.MariaDbDataSource;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,6 +47,19 @@ class ActivityDaoTest {
         Activity act = new Activity(LocalDateTime.of(2021,2,2,10,22),"Running again", Type.RUNNING);
         activityDao.saveActivity(act);
         assertEquals(4, activityDao.listActivities().size());
+    }
+
+    @Test
+    public void selectBeforeDateTest(){
+        System.out.println(activityDao.selectActivitiesBeforeDate(LocalDate.of(2021,1,10)));
+    }
+
+    @Test
+    public void findByIdTest(){
+        Activity activity = new Activity(LocalDateTime.of(2021,1,2,10,22),"Running once again", Type.RUNNING);
+        Activity result = activityDao.saveActivity(activity);
+
+        assertEquals("Running once again", activityDao.findActivityByID(result.getId()).getDesc());
     }
 
 
