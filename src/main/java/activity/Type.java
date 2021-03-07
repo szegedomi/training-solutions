@@ -1,4 +1,4 @@
-package activitytracker;
+package activity;
 
 public enum Type {
 

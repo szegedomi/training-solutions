@@ -1,4 +1,4 @@
-package activitytracker;
+package activity;
 
 import javax.sql.DataSource;
 import java.sql.*;
@@ -81,6 +81,8 @@ public class ActivityDao {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement("select * from activities where start_time < ? "))
         {
+
+
             LocalDateTime param = date.atTime(0,0,0);
             stmt.setTimestamp(1, Timestamp.valueOf(param));
             try(ResultSet rs = stmt.executeQuery()){
@@ -93,7 +95,7 @@ public class ActivityDao {
             catch (SQLException se){
                 throw new IllegalStateException("Cannot read", se);
             }
-            }
+        }
         catch (SQLException se) {
             throw new IllegalStateException("Cannot connect", se);
         }

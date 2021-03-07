@@ -1,7 +1,6 @@
-package activitytracker;
+package activity;
 
 
-import abstractclass.gamecharacter.AxeWarrior;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

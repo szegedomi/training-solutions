@@ -1,4 +1,4 @@
-package activitytracker;
+package activity;
 
 import java.time.LocalDateTime;
 
