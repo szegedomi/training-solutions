@@ -1,10 +1,16 @@
 package vaccination;
 
+import org.mariadb.jdbc.MariaDbDataSource;
+
+import java.sql.SQLException;
 import java.util.Scanner;
 
 public class VacApp {
 
     private void printMenu(){
+        System.out.println("****************************");
+        System.out.println("**** Oltási applikáció *****");
+        System.out.println("****************************");
         System.out.println("1. Regisztráció");
         System.out.println("2. Tömeges regisztráció");
         System.out.println("3. Generálás");
@@ -12,15 +18,16 @@ public class VacApp {
         System.out.println("5. Oltás meghiúsulás");
         System.out.println("6. Riport");
         System.out.println("7. Kilépés");
+        System.out.println("****************************");
     }
 
-    private void runMenu(int menuPoint, Menu menu, VacDAO vd){
+    private void runMenu(int menuPoint, Menu menu, VacDAO vd, Validator validator){
         switch (menuPoint){
             case 1:
-                menu.register(vd);
+                menu.register(vd, validator);
                 break;
             case 2:
-                menu.massRegister(vd);
+                menu.massRegister(vd, validator);
                 break;
             case 3:
                 menu.generate(vd);
@@ -41,14 +48,24 @@ public class VacApp {
         return sc.nextInt();
     }
 
-    private boolean isValidMenu(int menu){
-        return menu > 0 && menu < 8;
-    }
 
     public static void main(String[] args){
 
         VacApp va = new VacApp();
-        VacDAO vd = new VacDAO();
+
+        MariaDbDataSource dataSource;
+        try{
+            dataSource = new MariaDbDataSource();
+            dataSource.setUrl("jdbc:mariadb://localhost:3306/vaccination?useUnicode=true");
+            dataSource.setUser("vaccination");
+            dataSource.setPassword("vaccination");
+        }
+        catch(SQLException se){
+            throw new IllegalStateException("Nem tud csatlakozni az adatbázishoz!");
+        }
+
+        VacDAO vd = new VacDAO(dataSource);
+        Validator validator = new Validator();
         Menu menu = new Menu();
         Scanner scanner = new Scanner(System.in);
 
@@ -57,12 +74,13 @@ public class VacApp {
         int menuPoint = va.selectMenu(scanner);
 
         while(menuPoint != 7){
-            if(va.isValidMenu(menuPoint)){
-                va.runMenu(menuPoint, menu, vd);
+            if(validator.isValidMenu(menuPoint)){
+                va.runMenu(menuPoint, menu, vd, validator);
             }
             else{
                 System.out.println("Nem létező menüpont, kérjük válasszon másikat!");
             }
+            va.printMenu();
             menuPoint = va.selectMenu(scanner);
         }
 
