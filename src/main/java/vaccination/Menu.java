@@ -1,10 +1,13 @@
 package vaccination;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Reader;
+
+
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Menu {
@@ -111,15 +114,132 @@ public class Menu {
     }
 
     public void generate(VacDAO vd) {
+
+        Path file;
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Kérem adja meg az elérését és a nevét az exportálandó fájlnak:");
+        file = Path.of(scanner.nextLine());
+
+        String zip;
+        System.out.println("Kérem adja meg az irányítószámot:");
+        zip = scanner.nextLine();
+
+        List<Citizen> generatedCitizens = vd.generateVacQueueByZip(zip);
+
+        try (BufferedWriter writer = Files.newBufferedWriter(file)){
+            LocalTime time = LocalTime.of(8,0);
+            writer.write("Időpont;Név;Irányítószám;Életkor;E-mail cím;TAJ szám");
+            writer.newLine();
+            for (Citizen citizen : generatedCitizens){
+                String line = time.toString() + ";" + citizen.getName() + ";" + citizen.getZip() + ";" + citizen.getAge() + ";" + citizen.getEmail() + ";" + citizen.getTaj();
+                writer.write(line);
+                writer.newLine();
+                time.plusMinutes(30);
+                System.out.println(line);
+            }
+
+        }
+        catch (IOException ioe) {
+            System.out.println("A fájlt nem lehetett legeneráni, próbálja meg később!");
+            return;
+        }
+
     }
 
-    public void vaccinate(VacDAO vd) {
+    public void vaccinate(VacDAO vd, Validator validator) {
+
+        Scanner scanner = new Scanner(System.in);
+        String taj;
+        System.out.println("Kérem adja meg a Taj-számot:");
+        taj = scanner.nextLine();
+
+        if(validator.isInvalidTaj(taj)){
+            System.out.println("Érvénytelen Taj-szám");
+            return;
+        }
+
+        Citizen citizen = vd.getCitizenByTaj(taj);
+        if(citizen == null){
+            System.out.println("Személy nem található az adatbázisban.");
+            return;
+        }
+
+        if(citizen.getNumber_of_vaccination() == 2){
+            System.out.println("A személy túl van a második oltásá!");
+            return;
+        }
+
+        if(citizen.getNumber_of_vaccination() == 1){
+            String vacType = vd.getVaccinationTypeByTaj(taj);
+            vd.updateLines(citizen, vacType, 2, "Megvalósult", "n.a.");
+            return;
+        }
+
+        System.out.println("Kérem adja meg a választott vakcina típusát:");
+        String vacType = scanner.nextLine();
+        if(validator.isInvalidVaccineType(vacType)){
+            System.out.println("Nem létező vakcina típus!");
+            return;
+        }
+        vd.updateLines(citizen, vacType, 1, "Megvalósult", "n.a.");
+
+
+
     }
+
+    public void failedVac(VacDAO vd, Validator validator) {
+
+        Scanner scanner = new Scanner(System.in);
+        String taj;
+        System.out.println("Kérem adja meg a Taj-számot:");
+        taj = scanner.nextLine();
+
+        if(validator.isInvalidTaj(taj)){
+            System.out.println("Érvénytelen Taj-szám");
+            return;
+        }
+
+        Citizen citizen = vd.getCitizenByTaj(taj);
+        if(citizen == null){
+            System.out.println("Személy nem található az adatbázisban.");
+            return;
+        }
+
+        System.out.println("Kérjük adja meg a meghiúsulás okát:");
+        String note = scanner.nextLine();
+
+        vd.updateLines(citizen, null, citizen.getNumber_of_vaccination(), "Meghiúsult", note);
+
+    }
+
 
     public void report(VacDAO vd) {
+
+        List<ZipReport> zipReports = new ArrayList<>();
+
+        zipReports = vd.generateEmptyReports();
+        vd.fillReport(zipReports);
+
+        Path file;
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Kérem adja meg az elérését és a nevét az exportálandó fájlnak:");
+        file = Path.of(scanner.nextLine());
+
+        try (BufferedWriter writer = Files.newBufferedWriter(file)){
+            writer.write("Irányítószám;0 oltást kapott;1 oltást kapott;2 oltást kapott");
+            writer.newLine();
+            for (ZipReport zr : zipReports){
+                writer.write(zr.toCSVRow());
+                writer.newLine();
+                System.out.println(zr.toString());
+            }
+
+        }
+        catch (IOException ioe) {
+            System.out.println("A fájlt nem lehetett legeneráni, próbálja meg később!");
+            return;
+        }
     }
 
-    public void failedVac(VacDAO vd) {
-    }
 
 }

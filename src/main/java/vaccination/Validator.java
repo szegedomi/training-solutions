@@ -34,4 +34,13 @@ public class Validator {
         return this.isEmpty(adat[0]) || this.isEmpty(adat[1]) || isInvalidEmail(adat[3]) || isInvalidAge(2) || isInvalidTaj(adat[4]);
 
     }
+
+    public boolean isInvalidVaccineType(String vactype){
+        for(VaccinationType vaccinationType : VaccinationType.values()){
+            if(vaccinationType.getType().equals(vactype)){
+                return false;
+            }
+        }
+        return true;
+    }
 }

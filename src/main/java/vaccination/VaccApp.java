@@ -5,7 +5,7 @@ import org.mariadb.jdbc.MariaDbDataSource;
 import java.sql.SQLException;
 import java.util.Scanner;
 
-public class VacApp {
+public class VaccApp {
 
     private void printMenu(){
         System.out.println("****************************");
@@ -33,10 +33,10 @@ public class VacApp {
                 menu.generate(vd);
                 break;
             case 4:
-                menu.vaccinate(vd);
+                menu.vaccinate(vd, validator);
                 break;
             case 5:
-                menu.failedVac(vd);
+                menu.failedVac(vd, validator);
                 break;
             default:
                 menu.report(vd);
@@ -51,7 +51,7 @@ public class VacApp {
 
     public static void main(String[] args){
 
-        VacApp va = new VacApp();
+        VaccApp va = new VaccApp();
 
         MariaDbDataSource dataSource;
         try{

@@ -1,10 +1,12 @@
 package vaccination;
 
-import activitytracker.Activity;
-
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.IntStream;
 
 public class VacDAO {
 
@@ -16,9 +18,8 @@ public class VacDAO {
 
     public boolean registerCitizen(Citizen citizen) {
 
-        try(Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement("insert into citizens(citizen_name, zip, age, email, taj, number_of_vaccination, last_vaccination) values(?, ?, ?, ?, ?, ?, ?)"))
-        {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("insert into citizens(citizen_name, zip, age, email, taj, number_of_vaccination, last_vaccination) values(?, ?, ?, ?, ?, ?, ?)")) {
             stmt.setString(1, citizen.getName());
             stmt.setString(2, citizen.getZip());
             stmt.setInt(3, citizen.getAge());
@@ -28,21 +29,152 @@ public class VacDAO {
             stmt.setDate(3, Date.valueOf(LocalDate.now()));
             stmt.executeUpdate();
 
-            /*try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    int id = rs.getInt(1);
-                    citizen.setId(id);
-                }
-            } catch (SQLException se) {
-                throw new IllegalStateException("Azonosító nem található!", se);
-            }*/
-
-        }
-        catch (SQLException SQLe) {
+        } catch (SQLException SQLe) {
             System.out.println("Sikertelen kapcsolat, kérjük próbála meg később!");
             return false;
         }
 
         return true;
+    }
+
+    public List<Citizen> generateVacQueueByZip(String zip) {
+        List<Citizen> citizens = new ArrayList<>();
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("select * from citizens where zip = " + zip + " order by age DESC, citizen_name ASC");
+             ResultSet rs = stmt.executeQuery()) {
+            int counter = 0;
+            while (rs.next() && counter < 16) {
+                Citizen citizen = new Citizen(rs.getString("citizen_name"), rs.getString("zip"), rs.getInt("age"), rs.getString("email"), rs.getString("taj"));
+                citizen.setId(rs.getInt("citizen_id"));
+                citizen.setId(rs.getInt("number_of_vaccination"));
+                citizen.setLast_vaccination(rs.getDate("last_vaccination").toLocalDate().atStartOfDay());
+                if (citizen.getNumber_of_vaccination() < 2 && citizen.getLast_vaccination().isBefore(LocalDateTime.now().minusDays(15))) {
+                    citizens.add(citizen);
+                    counter++;
+                }
+            }
+            return citizens;
+        } catch (SQLException SQLe) {
+            System.out.println("Az adatbázis kapcsolat nem jött létre, kérjük próbálja meg később!");
+            return null;
+        }
+    }
+
+    public Citizen getCitizenByTaj(String taj) {
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("select * from citizens where taj = " + taj);
+             ResultSet rs = stmt.executeQuery()) {
+            Citizen citizen = new Citizen(rs.getString("citizen_name"), rs.getString("zip"), rs.getInt("age"), rs.getString("email"), rs.getString("taj"));
+            citizen.setId(rs.getInt("citizen_id"));
+            citizen.setId(rs.getInt("number_of_vaccination"));
+            citizen.setLast_vaccination(rs.getDate("last_vaccination").toLocalDate().atStartOfDay());
+            return citizen;
+        } catch (SQLException SQLe) {
+            System.out.println("Az adatbáziskapocsolat meghiúsult, próbálja meg később!");
+            return null;
+        }
+    }
+
+    public String getVaccinationTypeByCitizenId(int id) {
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("select vaccination_type from vaccinations where citizen_id = ? AND status = ?")) {
+            stmt.setInt(1, id);
+            stmt.setString(2, "Megvalósult");
+            ResultSet rs = stmt.executeQuery();
+            return rs.getString(1);
+        } catch (SQLException SQLe) {
+            System.out.println("Az adatbáziskapocsolat meghiúsult, próbálja meg később!");
+            return null;
+        }
+    }
+
+
+    public String getVaccinationTypeByTaj(String taj) {
+        Citizen citizen = this.getCitizenByTaj(taj);
+        return this.getVaccinationTypeByCitizenId(citizen.getId());
+
+    }
+
+    public void updateLines(Citizen citizen, String vacType, int numOfVac, String status, String note) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt1 = conn.prepareStatement("update citizens set number_of_vaccination = ?, last_vaccination where citizen_id = ?");
+             PreparedStatement stmt2 = conn.prepareStatement("insert into vaccinations (citizen_id, vaccination_date, status, note, vaccination_type) values(?,?,?,?,?)")) {
+            conn.setAutoCommit(false);
+            try {
+                stmt2.setInt(1, citizen.getId());
+                stmt2.setDate(2, Date.valueOf(LocalDate.now()));
+                stmt2.setString(3, status);
+                stmt2.setString(4, note);
+                stmt2.setString(5, vacType);
+                stmt2.executeUpdate();
+
+                if (!"Meghiúsult".equals(status)) {
+                    stmt1.setInt(1, numOfVac);
+                    stmt1.setDate(2, Date.valueOf(LocalDate.now()));
+                    stmt1.executeUpdate();
+                }
+                conn.commit();
+            } catch (SQLException SQLe) {
+                System.out.println("Sikertelen művelet!");
+                conn.rollback();
+            }
+
+        } catch (SQLException SQLe) {
+            System.out.println("Az adatbáziskapcsolat meghiúsult, próbálja meg később!");
+            return;
+        }
+    }
+
+    public List<ZipReport> generateEmptyReports() {
+
+        List<ZipReport> zipReports = new ArrayList<>();
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("select distinct zip from cities");
+             ResultSet rs = stmt.executeQuery())
+        {
+            while(rs.next()){
+                zipReports.add(new ZipReport(rs.getString("zip")));
+            }
+        }
+        catch (SQLException SQLe) {
+            System.out.println("Az adabáziskapcsolat nem létesült, próbálja meg később!");
+            return null;
+        }
+        return zipReports;
+    }
+
+    public void fillReport(List<ZipReport> zipReports) {
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("select (zip, number_of_vaccination) from citizens");
+             ResultSet rs = stmt.executeQuery())
+        {
+            while(rs.next()){
+                String zip = rs.getString("zip");
+                int index = IntStream.range(0, zipReports.size())
+                        .filter(i -> zipReports.get(i).getZip().equals(zip))
+                        .findFirst()
+                        .orElse(-1);
+                int vaccination = rs.getInt("number_of_vaccination");
+                if( vaccination == 2){
+                    zipReports.get(index).increaseSV();
+                }
+                else if( vaccination == 1)
+                {
+                    zipReports.get(index).increaseFV();
+                }
+                else{
+                    zipReports.get(index).increaseNV();
+                }
+            }
+        }
+        catch (SQLException SQLe) {
+            System.out.println("Az adabáziskapcsolat nem létesült, próbálja meg később!");
+            return;
+        }
     }
 }
