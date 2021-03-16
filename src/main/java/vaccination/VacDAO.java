@@ -1,5 +1,7 @@
 package vaccination;
 
+import org.w3c.dom.ls.LSOutput;
+
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.LocalDate;
@@ -19,14 +21,13 @@ public class VacDAO {
     public boolean registerCitizen(Citizen citizen) {
 
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("insert into citizens(citizen_name, zip, age, email, taj, number_of_vaccination, last_vaccination) values(?, ?, ?, ?, ?, ?, ?)")) {
+             PreparedStatement stmt = conn.prepareStatement("insert into citizens(citizen_name, zip, age, email, taj, number_of_vaccination) values(?, ?, ?, ?, ?, ?)")) {
             stmt.setString(1, citizen.getName());
             stmt.setString(2, citizen.getZip());
             stmt.setInt(3, citizen.getAge());
             stmt.setString(4, citizen.getEmail());
             stmt.setString(5, citizen.getTaj());
-            stmt.setInt(5, 0);
-            stmt.setDate(3, Date.valueOf(LocalDate.now()));
+            stmt.setInt(6, 0);
             stmt.executeUpdate();
 
         } catch (SQLException SQLe) {
@@ -41,19 +42,28 @@ public class VacDAO {
         List<Citizen> citizens = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("select * from citizens where zip = " + zip + " order by age DESC, citizen_name ASC");
-             ResultSet rs = stmt.executeQuery()) {
-            int counter = 0;
-            while (rs.next() && counter < 16) {
-                Citizen citizen = new Citizen(rs.getString("citizen_name"), rs.getString("zip"), rs.getInt("age"), rs.getString("email"), rs.getString("taj"));
-                citizen.setId(rs.getInt("citizen_id"));
-                citizen.setId(rs.getInt("number_of_vaccination"));
-                citizen.setLast_vaccination(rs.getDate("last_vaccination").toLocalDate().atStartOfDay());
-                if (citizen.getNumber_of_vaccination() < 2 && citizen.getLast_vaccination().isBefore(LocalDateTime.now().minusDays(15))) {
-                    citizens.add(citizen);
-                    counter++;
+             PreparedStatement stmt = conn.prepareStatement("select * from citizens where zip = ? order by age DESC, citizen_name ASC")
+             ) {
+            stmt.setString(1, zip);
+            try (ResultSet rs = stmt.executeQuery()){
+                int counter = 0;
+                while (rs.next() && counter < 16) {
+                    Citizen citizen = new Citizen(rs.getString("citizen_name"), rs.getString("zip"), rs.getInt("age"), rs.getString("email"), rs.getString("taj"));
+                    citizen.setId(rs.getInt("id"));
+                    citizen.setNumber_of_vaccination(rs.getInt("number_of_vaccination"));
+                    if(citizen.getNumber_of_vaccination() > 0)
+                    {
+                        citizen.setLast_vaccination(rs.getDate("last_vaccination").toLocalDate().atStartOfDay());
+                    }
+                    if (citizen.getNumber_of_vaccination() < 1 || (citizen.getNumber_of_vaccination() ==1 && citizen.getLast_vaccination().isBefore(LocalDateTime.now().minusDays(15)))) {
+                        citizens.add(citizen);
+                        counter++;
+                    }
                 }
             }
+            catch (SQLException SQLe)
+            {System.out.println("A keresésnek nem lett eredménye!");
+                return null;}
             return citizens;
         } catch (SQLException SQLe) {
             System.out.println("Az adatbázis kapcsolat nem jött létre, kérjük próbálja meg később!");
@@ -64,13 +74,21 @@ public class VacDAO {
     public Citizen getCitizenByTaj(String taj) {
 
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("select * from citizens where taj = " + taj);
-             ResultSet rs = stmt.executeQuery()) {
-            Citizen citizen = new Citizen(rs.getString("citizen_name"), rs.getString("zip"), rs.getInt("age"), rs.getString("email"), rs.getString("taj"));
-            citizen.setId(rs.getInt("citizen_id"));
-            citizen.setId(rs.getInt("number_of_vaccination"));
-            citizen.setLast_vaccination(rs.getDate("last_vaccination").toLocalDate().atStartOfDay());
-            return citizen;
+             PreparedStatement stmt = conn.prepareStatement("select * from citizens where taj = ?")) {
+            stmt.setString(1, taj);
+            try (ResultSet rs = stmt.executeQuery()){
+                rs.next();
+                Citizen citizen = new Citizen(rs.getString("citizen_name"), rs.getString("zip"), rs.getInt("age"), rs.getString("email"), rs.getString("taj"));
+                citizen.setId(rs.getInt("id"));
+                citizen.setNumber_of_vaccination(rs.getInt("number_of_vaccination"));
+                if(citizen.getNumber_of_vaccination() > 0) {
+                    citizen.setLast_vaccination(rs.getDate("last_vaccination").toLocalDate().atStartOfDay());
+                }
+                return citizen;
+            }catch (SQLException SQLe){
+                System.out.println("Az adatbáziskapocsolat meghiúsult!");
+                return null;
+            }
         } catch (SQLException SQLe) {
             System.out.println("Az adatbáziskapocsolat meghiúsult, próbálja meg később!");
             return null;
@@ -80,10 +98,11 @@ public class VacDAO {
     public String getVaccinationTypeByCitizenId(int id) {
 
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("select vaccination_type from vaccinations where citizen_id = ? AND status = ?")) {
+             PreparedStatement stmt = conn.prepareStatement("select vaccination_type from vaccination where citizen_id = ? AND status = ?")) {
             stmt.setInt(1, id);
             stmt.setString(2, "Megvalósult");
             ResultSet rs = stmt.executeQuery();
+            rs.next();
             return rs.getString(1);
         } catch (SQLException SQLe) {
             System.out.println("Az adatbáziskapocsolat meghiúsult, próbálja meg később!");
@@ -100,8 +119,8 @@ public class VacDAO {
 
     public void updateLines(Citizen citizen, String vacType, int numOfVac, String status, String note) {
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt1 = conn.prepareStatement("update citizens set number_of_vaccination = ?, last_vaccination where citizen_id = ?");
-             PreparedStatement stmt2 = conn.prepareStatement("insert into vaccinations (citizen_id, vaccination_date, status, note, vaccination_type) values(?,?,?,?,?)")) {
+             PreparedStatement stmt1 = conn.prepareStatement("update citizens set number_of_vaccination = ?, last_vaccination = ? where id = ?");
+             PreparedStatement stmt2 = conn.prepareStatement("insert into vaccination (citizen_id, vaccination_date, status, note, vaccination_type) values(?,?,?,?,?)")) {
             conn.setAutoCommit(false);
             try {
                 stmt2.setInt(1, citizen.getId());
@@ -114,6 +133,7 @@ public class VacDAO {
                 if (!"Meghiúsult".equals(status)) {
                     stmt1.setInt(1, numOfVac);
                     stmt1.setDate(2, Date.valueOf(LocalDate.now()));
+                    stmt1.setInt(3, citizen.getId());
                     stmt1.executeUpdate();
                 }
                 conn.commit();
@@ -150,7 +170,7 @@ public class VacDAO {
     public void fillReport(List<ZipReport> zipReports) {
 
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("select (zip, number_of_vaccination) from citizens");
+             PreparedStatement stmt = conn.prepareStatement("select zip, number_of_vaccination from citizens");
              ResultSet rs = stmt.executeQuery())
         {
             while(rs.next()){

@@ -1,0 +1,2 @@
+Név;Zip;Kor;Email;Taj
+D;7140;28;c@c.hu;044683186

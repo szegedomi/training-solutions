@@ -10,9 +10,9 @@ public class Validator {
 
     public boolean isEmpty(String adat){return adat.isEmpty() || adat == null;}
 
-    public boolean isInvalidEmail(String adat){return adat.length() >= 3 && adat.contains("@");}
+    public boolean isInvalidEmail(String adat){return adat.length() < 3 || !adat.contains("@");}
 
-    public boolean isInvalidAge(int adat) {return adat > 10 && adat < 150;}
+    public boolean isInvalidAge(int adat) {return adat < 10 || adat > 150;}
 
     public boolean isInvalidTaj(String adat) {
         if (adat.length() != 9) {
@@ -31,7 +31,7 @@ public class Validator {
 
     public boolean isInvalidRecord(String[] adat) {
 
-        return this.isEmpty(adat[0]) || this.isEmpty(adat[1]) || isInvalidEmail(adat[3]) || isInvalidAge(2) || isInvalidTaj(adat[4]);
+        return this.isEmpty(adat[0]) || this.isEmpty(adat[1]) || isInvalidEmail(adat[3]) || isInvalidAge(Integer.parseInt(adat[2])) || isInvalidTaj(adat[4]);
 
     }
 

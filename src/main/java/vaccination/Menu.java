@@ -36,7 +36,6 @@ public class Menu {
             System.out.println("Érvénytelen irányítószám, sikertelen regisztráció!");
             return;
         }
-        System.out.println(zip + ": ");
 
         System.out.println("Email címe:");
         email = scanner.nextLine();
